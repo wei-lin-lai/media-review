@@ -14,7 +14,7 @@ import sys
 #
 # Video mode: Gemini lists every problem with a timecode and a fix.
 #             Reviewer notes (with timecodes) are added to the same list.
-# Photo mode: You type what to look for (for example "blurry").
+# Photo mode: You type what to look for (for example "blurry" or "overexposed or too dark").
 #             Gemini checks every photo in a folder and the matching
 #             photos are copied into a separate folder.
 #
@@ -40,7 +40,7 @@ USAGE = ("Usage:\n"
          "  python media_review.py photos <photo folder> \"what to look for\"")
 
 
-# ---------- Google login (same as class 10 and 11) ----------
+# Google login
 
 def get_google_token():
     creds = service_account.Credentials.from_service_account_file(
@@ -51,7 +51,7 @@ def get_google_token():
     return creds.token, creds.project_id
 
 
-# ---------- API 1: send a file + prompt to Gemini ----------
+# API 1: send a file + prompt to Gemini
 
 def ask_gemini(token, project_id, file_path, prompt, response_schema):
     my_headers = {
@@ -104,9 +104,9 @@ def file_too_big(file_path):
     return False
 
 
-# ============================================================
+############################################################## 
 # VIDEO MODE
-# ============================================================
+############################################################## 
 
 def read_reviewer_notes(notes_path):
     # Each line looks like:  00:05 | Kat | the hand has six fingers
@@ -267,9 +267,9 @@ def video_discord_message(report):
     return "\n".join(lines)
 
 
-# ============================================================
+############################################################## 
 # PHOTO MODE
-# ============================================================
+############################################################## 
 
 def review_photos(folder, look_for):
     token, project_id = get_google_token()
@@ -353,9 +353,9 @@ def photo_discord_message(report):
             f"{', '.join(flagged)}")
 
 
-# ============================================================
+############################################################## 
 # SAVE AND SEND (used by both modes)
-# ============================================================
+############################################################## 
 
 def save_report(report, text):
     os.makedirs("reports", exist_ok=True)
@@ -372,7 +372,7 @@ def save_report(report, text):
     return txt_path
 
 
-# ---------- API 2: send the results to Discord ----------
+# API 2: send the results to Discord 
 
 def send_to_discord(message, txt_path):
     with open("keys/discord.json", "r") as file:
@@ -395,9 +395,9 @@ def send_to_discord(message, txt_path):
         print(f"Discord error {r.status_code}: {r.text}")
 
 
-# ============================================================
+############################################################## 
 # RUN
-# ============================================================
+############################################################## 
 
 if __name__ == "__main__":
     # sys.argv[1] is the mode (video or photos), sys.argv[2] is the file or folder
