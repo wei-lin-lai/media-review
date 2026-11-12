@@ -1,47 +1,42 @@
 # Media Review
 
-A Python workflow that reviews AI generated videos (from Veo, Seedance, etc.) and photos.
+A Python script that uses Gemini to review AI-generated videos and photos, then posts the results to Discord.
 
-**Video mode**
-1. **AI check:** Gemini watches the video and lists problems (deformed hands, flicker, warped logos, things that don't match the prompt), each with a timecode and a suggested fix.
-2. **Reviewer notes:** a supervisor or teammate can add their own notes with a timecode in a text file. Their notes go into the same list as the AI notes.
-3. **Output:** one list of what to change before re-generating.
+I made this for the HEX training API assignment. At work we generate a lot of video and images with AI, and someone has to watch every clip and look for problems like broken hands, flicker or warped logos. This script does a first pass so the team knows where to look.
 
-**Photo mode**
-1. You give it a folder of photos and type what you are looking for, for example `"blurry"` or `"eyes closed"`.
-2. Gemini checks every photo and answers match or no match, with a confidence score and a short reason.
-3. **Output:** the matching photos are copied into a separate folder, with a list of why each one was picked.
+It has two modes:
 
-Results from both modes are printed in the terminal, saved to `reports/`, and posted to a Discord channel.
+- **video**: Gemini watches a video and lists the problems it finds, with timecodes and how to fix them. You can also add notes from a person (a supervisor or teammate) in a text file, and they get merged into the same list.
+- **photos**: You point it at a folder and type what you're looking for, like "blurry". Gemini checks each photo, and the ones that match get copied into a separate folder.
 
-## APIs
+The results show up in the terminal, get saved in `reports/`, and get posted to a Discord channel.
 
-| API | What it does | Needs |
-|---|---|---|
-| Gemini on Vertex AI | Reviews the video or photos | Google Cloud service account (`keys/service.json`) with Vertex AI enabled. Billed to that Google Cloud project. |
-| Discord webhook | Posts the results to a channel | A webhook URL from the channel settings (`keys/discord.json`). Free. Keep the URL private. |
+## APIs used
 
-Discord is used for testing. The plan is to send video reviews to Frame.io as timecoded comments once Frame.io API access is available. The sending step is its own function (`send_to_discord`), so it can be swapped out.
+- **Gemini (Vertex AI)** to review the videos and photos. Uses a Google Cloud service account file.
+- **Discord webhook** to post the results to a channel.
+
+I'm using Discord for now. Later this should send comments to Frame.io instead, once we have API access.
 
 ## Installation (Mac)
 
-1. Clone the repo and go into the folder:
+Clone the repo:
 
 ```bash
-git clone <repo url>
+git clone https://github.com/wei-lin-lai/media-review.git
 cd media-review
 ```
 
-2. Create and activate a virtual environment:
+Make a virtual environment and turn it on:
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 ```
 
-You should see `(.venv)` at the start of the terminal line. Run `source .venv/bin/activate` again every time you open a new terminal.
+You should see `(.venv)` at the start of the line. If you open a new terminal, run the `source` line again.
 
-3. Install the packages:
+Install the packages:
 
 ```bash
 pip install -r requirements.txt
@@ -49,7 +44,7 @@ pip install -r requirements.txt
 
 ## Keys
 
-Make a `keys` folder in the project folder. It is listed in `.gitignore`, so it will not be uploaded.
+Make a folder called `keys` and put two files in it:
 
 ```
 keys/
@@ -57,68 +52,70 @@ keys/
 └── discord.json
 ```
 
-- `service.json`: the Google Cloud service account file. The project ID is read from this file.
-- `discord.json`: copy `example_discord.json`, rename it to `discord.json`, and paste your webhook URL.
+- `service.json` is the Google Cloud service account file.
+- `discord.json` holds your Discord webhook URL. Copy `example_discord.json`, rename it to `discord.json`, and paste your URL in.
 
-To get a Discord webhook URL: open the channel settings, go to **Integrations > Webhooks > New Webhook**, then **Copy Webhook URL**. You need the Manage Webhooks permission on the server.
+To get a webhook URL in Discord: go to the channel settings, then Integrations > Webhooks > New Webhook > Copy Webhook URL.
 
-## Usage
+The `keys` folder is in `.gitignore`, so it won't get uploaded. Don't share these files.
 
-```bash
-python media_review.py video <video file> [notes file] ["prompt used for the video"]
-python media_review.py photos <photo folder> "what to look for"
-```
+## How to run
 
-### Video examples
+Video:
 
 ```bash
-# AI review only
 python media_review.py video videos/shot01.mp4
-
-# AI review + reviewer notes
-python media_review.py video videos/shot01.mp4 example_notes.txt
-
-# AI review + reviewer notes + check against the original prompt
-python media_review.py video videos/shot01.mp4 example_notes.txt "a woman pours coffee in a sunny kitchen, slow push in"
 ```
 
-### Reviewer notes format
+Video with notes from a person:
 
-One note per line, `time | name | comment`. The name is optional. Lines starting with `#` are skipped.
+```bash
+python media_review.py video videos/shot01.mp4 example_notes.txt
+```
+
+You can also add the prompt that was used to make the video, and Gemini will check if the video matches it:
+
+```bash
+python media_review.py video videos/shot01.mp4 example_notes.txt "a woman pours coffee in a sunny kitchen"
+```
+
+Photos:
+
+```bash
+python media_review.py photos photos/ "blurry"
+python media_review.py photos photos/ "someone has their eyes closed"
+```
+
+Photo types that work: `.jpg`, `.jpeg`, `.png`, `.webp`
+
+## Notes file
+
+One note per line, written like this:
 
 ```
 00:02 | Supervisor | logo on the cup should face the camera
 00:05 | the left hand looks too small
 ```
 
-### Photo examples
+The name is optional. If there's no name, it shows up as "Reviewer". Lines starting with `#` are ignored. See `example_notes.txt`.
 
-```bash
-python media_review.py photos photos/ "blurry"
-python media_review.py photos photos/ "someone has their eyes closed"
-python media_review.py photos photos/ "the product logo is not visible"
-```
+## What you get
 
-Supported photo types: `.jpg`, `.jpeg`, `.png`, `.webp`
+Video:
+- The list of problems and notes in the terminal, sorted by time
+- `reports/<video name>_review.txt` and `.json`
+- A Discord message with the list and the `.txt` file attached
 
-## Output
+Photos:
+- The matching photos in the terminal, with how confident Gemini is and why
+- Copies of those photos in `reports/<folder name>_flagged/` (the originals stay where they are)
+- `reports/<folder name>_review.txt` and `.json`
+- A Discord message with the results
 
-**Video mode**
-- Terminal: the full list, sorted by time
-- `reports/<video name>_review.txt`: the same list as a text file
-- `reports/<video name>_review.json`: the same data as JSON (for the node in Part 2)
-- Discord: a short summary with the full `.txt` report attached
+## Things to know
 
-**Photo mode**
-- Terminal: the matching photos with confidence and reason
-- `reports/<folder name>_flagged/`: copies of the matching photos (the originals are not moved)
-- `reports/<folder name>_review.txt` and `.json`: the results
-- Discord: a short summary with the full `.txt` report attached
-
-## Notes and limits
-
-- Files are sent inside the request (base64). Google recommends keeping the whole request under 20 MB, so files larger than 20 MB are skipped. Short generated clips and normal photos are usually much smaller.
-- Photo mode sends one request per photo. Test with a small folder first.
-- The model is set at the top of `media_review.py` (`MODEL = "gemini-3.8-flash"`). Change it there if needed.
-- Gemini can miss problems or flag things that are fine. The reviewer notes and the confidence score are there so people can make the final call.
-- Do not commit client footage. `videos/`, `photos/` and `reports/` are in `.gitignore`.
+- Files over 20 MB get skipped. Most short AI clips and photos are way under that.
+- Photo mode sends one request per photo, so try a small folder first.
+- Gemini isn't perfect. It can miss things or flag stuff that's fine, which is why the notes from people are there too.
+- The model name is at the top of `media_review.py` if you need to change it.
+- `videos/`, `photos/` and `reports/` are in `.gitignore`, so footage doesn't get uploaded.
