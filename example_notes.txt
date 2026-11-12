@@ -1,0 +1,4 @@
+# One note per line: time | name | comment
+# The name is optional: time | comment
+00:02 | Supervisor | logo on the cup should face the camera
+00:05 | the left hand looks too small
