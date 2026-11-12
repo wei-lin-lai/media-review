@@ -242,10 +242,29 @@ def video_report_to_text(report):
 
 
 def video_discord_message(report):
-    return (f"**Video Review: {report['name']}**\n"
-            f"Status: **{report['status']}**\n"
-            f"Gemini issues: {report['ai_issue_count']} | Reviewer notes: {report['reviewer_note_count']}\n"
-            f"{report['summary']}")
+    lines = [
+        f"**Video Review: {report['name']}**",
+        f"Status: **{report['status']}**",
+        f"Gemini issues: {report['ai_issue_count']} | Reviewer notes: {report['reviewer_note_count']}",
+        f"{report['summary']}",
+        ""
+    ]
+
+    # list every item so people can see who said what without opening the file
+    for number, item in enumerate(report["items"], start=1):
+        if item["start"] == item["end"]:
+            time = item["start"]
+        else:
+            time = f"{item['start']}-{item['end']}"
+
+        if item["source"] == "Gemini":
+            who = f"🤖 Gemini ({item['severity']})"
+        else:
+            who = f"👤 {item['source']}"
+
+        lines.append(f"{number}. `{time}` {who}: {item['problem']}")
+
+    return "\n".join(lines)
 
 
 # ============================================================
